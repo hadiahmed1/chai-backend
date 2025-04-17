@@ -1,6 +1,7 @@
 import express from "express";
 import { upload } from "../middlewares/multer.middleware.js";
-import { registerUser, loginUser } from "../controllers/user.controller.js";
+import { registerUser, loginUser, logoutUser } from "../controllers/user.controller.js";
+import verifyJWT from "../middlewares/auth.middleware.js";
 
 const userRouter = express.Router();
 
@@ -10,4 +11,5 @@ userRouter.post('/register',
         { name: "coverImage", maxCount: 1 }
     ]), registerUser);
 userRouter.get('/login', loginUser );
+userRouter.post('/logout', verifyJWT, logoutUser);
 export default userRouter;
