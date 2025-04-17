@@ -3,11 +3,12 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = (user) => {
     try {
         const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
         user.refreshToken = refreshToken;
         user.save({ validateBeforeSave: false });
 
@@ -64,7 +65,6 @@ export const loginUser = asyncHandler(async (req, res) => {
         secure: true
     }
     const { accessToken, refreshToken } = generateAccessAndRefreshToken(user);
-    // res.status(200).json(new ApiResponse(200, generateAccessAndRefreshToken(user), "loggin successfull"));
     return res.status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
@@ -83,4 +83,28 @@ export const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logout successfull"));
-})
+});
+
+export const refreshTokens = asyncHandler(async (req, res) => {
+    try {
+        const incommingRefreshToken = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "");
+        if (!incommingRefreshToken) throw new ApiError(401, "Unauthorized");
+        const decodedToken = jwt.verify(incommingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const user = await User.findById(decodedToken._id);
+        if (!user && user.refreshAccesstoken !== incommingRefreshToken) throw ApiError(401, "Unauthorized Access");
+    
+        const { accessToken, refreshToken } = generateAccessAndRefreshToken(user);
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+        return res.status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(new ApiResponse(200, {accessToken, refreshToken }, "Tokens refreshed successfully"));
+    } catch (error) {
+        console.log(error);
+        
+        throw new ApiError(500, "Couldn't refresh tokens" )
+    }
+});
