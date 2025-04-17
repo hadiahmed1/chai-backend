@@ -21,7 +21,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
     const avatar = await uploadOnCloudinary(avatarfilePath);
     const coverImage = (coverImagePath) ? await uploadOnCloudinary(coverImagePath) : null;
-    if (!avatar) throw new ApiError("401", "Couldnt upload");
+    if (!avatar) throw new ApiError("401", null,"Couldnt upload");
 
     const user = new User({
         username, email, fullName, password,

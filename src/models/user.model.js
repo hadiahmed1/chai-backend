@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
+        select: false
     },
     watchHistory: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -33,7 +34,7 @@ const userSchema = new mongoose.Schema({
     }],
     refreshToken: {
         type: String,
-        unique: true
+        select: false
     },
     avatar: {
         type: String,
