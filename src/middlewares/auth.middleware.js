@@ -9,7 +9,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
 
         if (!accessToken) throw new ApiError(401, "Unauthorized");
         const decodedToken = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-        const user = User.findById(decodedToken?._id);
+        const user = await User.findById(decodedToken?._id);
         if (!user) throw new ApiError(401, "Unauthorized");
         req.user = user;
         next();

@@ -55,7 +55,6 @@ export const loginUser = asyncHandler(async (req, res) => {
     //get corresponding user
     const user = await User.findOne({ $or: [{ email }, { username }] }).select("password");
     if (!user) throw new ApiError(404, "User not found");
-    console.log("user:>>", user);
     //match password
     const isPasswordCorrect = await user.isPasswordCorrect(password);
     if (!isPasswordCorrect) throw new ApiError(401, "Inavalid credentials");
@@ -75,14 +74,13 @@ export const loginUser = asyncHandler(async (req, res) => {
 
 //protected routes ->will have access to req.user
 export const logoutUser = asyncHandler(async (req, res) => {
-    await User.findByIdAndUpdate(req.user._id, {refreshToken:""});
-
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, { $set: { refreshToken: null } }, { new: true });
     const options = {
         httpOnly: true,
         secure: true
     }
     return res.status(200)
-        .clearCookie("accessToken",options)
-        .clearCookie("refreshToken",options)
-        .json(new ApiResponse(200,{} ,"User logout successfull"));
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User logout successfull"));
 })
