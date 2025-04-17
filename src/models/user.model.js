@@ -38,12 +38,11 @@ const userSchema = new mongoose.Schema({
     avatar: {
         type: String,
         unique: true,
-        required: true
+        // required: true
     },
     coverImage: {
         type: String,
         unique: true,
-        required: true
     }
 }, { timestamps: true });
 
