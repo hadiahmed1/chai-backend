@@ -92,8 +92,10 @@ export const refreshTokens = asyncHandler(async (req, res) => {
         const decodedToken = jwt.verify(incommingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await User.findById(decodedToken._id);
         if (!user && user.refreshAccesstoken !== incommingRefreshToken) throw ApiError(401, "Unauthorized Access");
-    
+
         const { accessToken, refreshToken } = generateAccessAndRefreshToken(user);
+        user.refreshToken = refreshToken;
+        user.save({ validateBeforeSave: false });
         const options = {
             httpOnly: true,
             secure: true
@@ -101,10 +103,22 @@ export const refreshTokens = asyncHandler(async (req, res) => {
         return res.status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", refreshToken, options)
-            .json(new ApiResponse(200, {accessToken, refreshToken }, "Tokens refreshed successfully"));
+            .json(new ApiResponse(200, { accessToken, refreshToken }, "Tokens refreshed successfully"));
     } catch (error) {
         console.log(error);
-        
-        throw new ApiError(500, "Couldn't refresh tokens" )
+        throw new ApiError(500, "Couldn't refresh tokens")
     }
 });
+
+export const changePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) throw ApiError(400, "Field mandatory");
+
+    const { _id } = req.user;
+    const user = await User.findById(_id);
+
+    if (!user.isPasswordCorrect(oldPassword)) throw ApiError(401, "Unauthorized access");
+
+    user.password = newPassword;
+    await user.save({});
+})
