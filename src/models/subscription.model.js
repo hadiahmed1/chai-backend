@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
 
 const subscriptionSchema = new mongoose.Schema({
-    channel: {
+    channel_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
     },
-    suscriberchannel: {
+    suscriber_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true

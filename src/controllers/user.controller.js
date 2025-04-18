@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
+import Subscription from "../models/subscription.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -30,6 +31,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     const oldUser = await User.findOne({ $or: [{ email }, { username }] });
     if (oldUser) throw new ApiError(409, "User already exists");
     //files
+    console.log(req)
     const avatarfilePath = req.files?.avatar[0]?.path;
     let coverImagePath;
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0)
@@ -71,7 +73,7 @@ export const loginUser = asyncHandler(async (req, res) => {
         .cookie("refreshToken", refreshToken, options)
         .json(new ApiResponse(200, { user, accessToken, refreshToken }, "User loggin successfull"));
 
-})
+});
 
 //protected routes ->will have access to req.user
 export const logoutUser = asyncHandler(async (req, res) => {
@@ -126,7 +128,7 @@ export const changePassword = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json(new ApiResponse(200, {}, "Password updated successfully"));
-})
+});
 
 export const getUser = asyncHandler(async (req, res) => res.status(200).json(
     new ApiResponse(200, req.user, "User fetched successfully")
@@ -140,7 +142,7 @@ export const updateUser = asyncHandler(async (req, res) => {
     }, { new: true });
 
     return res.status(200).json(new ApiResponse(200, {}, "user updated successfully"));
-})
+});
 
 export const changeAvatar = asyncHandler(async (req, res) => {
     const avatarfilePath = req.files?.avatar[0]?.path;
@@ -153,4 +155,55 @@ export const changeAvatar = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json(new ApiResponse(200, avatar, "Avatar Updated successfully"));
+});
+
+export const getChannelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+    if (!username?.trim()) throw new ApiError(400, "username is required");
+
+    const channel = await User.aggregate([
+        { $match: { username: username?.toLowerCase() } },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel_id",
+                as: "suscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "suscriber_id",
+                as: "susccribedToChannels"
+            }
+        },
+        {
+            $addFields: {
+                suscriberCount: { $size: "$suscribers" },
+                susccribedToChannelsCount: { $size: "$susccribedToChannels" },
+                isSuscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$suscribers.suscriber_id"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+    ]);
+    return res.json(channel);
+});
+
+export const suscribe = asyncHandler(async (req, res) => {
+    const { channelName } = req.params;
+    if (!channelName) throw new ApiError(400, "Channel name required");
+    const channel = await User.findOne({ username: channelName });
+    if (!channel) throw new ApiError(404, "Channel not found");
+
+    const subscription = new Subscription({ channel_id: channel._id, suscriber_id: req.user._id });
+    subscription.save();
+    return res.status(200).json(new ApiResponse(200, {}, `Subscribed to ${channelName}`));
+
 })
