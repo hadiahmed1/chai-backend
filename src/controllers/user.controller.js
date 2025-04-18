@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import User from "../models/user.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
 const generateAccessAndRefreshToken = (user) => {
     try {
@@ -94,8 +95,10 @@ export const refreshTokens = asyncHandler(async (req, res) => {
         if (!user && user.refreshAccesstoken !== incommingRefreshToken) throw ApiError(401, "Unauthorized Access");
 
         const { accessToken, refreshToken } = generateAccessAndRefreshToken(user);
-        user.refreshToken = refreshToken;
-        user.save({ validateBeforeSave: false });
+        await User.findByIdAndUpdate(user._id, {
+            refreshToken: refreshToken
+        }, { new: true, runValidators: false });
+
         const options = {
             httpOnly: true,
             secure: true
@@ -115,10 +118,12 @@ export const changePassword = asyncHandler(async (req, res) => {
     if (!oldPassword || !newPassword) throw ApiError(400, "Field mandatory");
 
     const { _id } = req.user;
-    const user = await User.findById(_id);
-
-    if (!user.isPasswordCorrect(oldPassword)) throw ApiError(401, "Unauthorized access");
+    const user = await User.findById(_id).select("password");
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordCorrect) throw new ApiError(401, "Unauthorized access");
 
     user.password = newPassword;
-    await user.save({});
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(new ApiResponse(200, {}, "Password updated successfully"));
 })
