@@ -141,3 +141,16 @@ export const updateUser = asyncHandler(async (req, res) => {
 
     return res.status(200).json(new ApiResponse(200, {}, "user updated successfully"));
 })
+
+export const changeAvatar = asyncHandler(async (req, res) => {
+    const avatarfilePath = req.files?.avatar[0]?.path;
+    if (!avatarfilePath) throw new ApiError(400, "Avatar image required");
+    const avatar = await uploadOnCloudinary(avatarfilePath);
+    if (!avatar.url) throw new ApiError(401, null, "Couldnt upload");
+
+    await User.findByIdAndUpdate(req.user._id, {
+        $set: { avatar: avatar.url }
+    });
+
+    return res.status(200).json(new ApiResponse(200, avatar, "Avatar Updated successfully"));
+})
