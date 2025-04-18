@@ -131,3 +131,13 @@ export const changePassword = asyncHandler(async (req, res) => {
 export const getUser = asyncHandler(async (req, res) => res.status(200).json(
     new ApiResponse(200, req.user, "User fetched successfully")
 ));
+
+export const updateUser = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body;
+    if (!fullName || !email) throw ApiError(400, "All fields are required");
+    const user = await User.findByIdAndUpdate(req.user._id, {
+        $set: { fullName, email }
+    }, { new: true });
+
+    return res.status(200).json(new ApiResponse(200, {}, "user updated successfully"));
+})
